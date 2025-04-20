@@ -50,6 +50,7 @@ local result = SoundQuery.Query({
     Power = 1,
     Bounces = 2,
     Falloff = "exponential",
+    Shape = "Point",
 })
 
 if result:DidReach(Vector3.new(15, 10, 0)) then
