@@ -7,12 +7,23 @@ export type QueryProps = {
 	Power: number?,
 	Bounces: number?,
 	IgnoreList: {Instance}?,
-	FilterFunction: ((Instance) -> boolean)?,
+
 	Falloff: "linear" | "exponential" | ((distance: number, max: number, power: number) -> number)?,
-	Direction: Vector3?,
+	FilterFunction: ((Instance) -> boolean)?,
 	PassthroughFunction: ((Instance, Enum.Material?) -> boolean)?,
 	OcclusionFunction: ((Instance, Enum.Material?) -> boolean)?,
 	DampeningFunction: ((Instance, Enum.Material?) -> number)?,
+
+	-- Optional direction override (mostly unused now)
+	Direction: Vector3?,
+
+	-- 🔽 NEW: RayDistribution-specific props 🔽
+	Shape: "Point" | "Spherical" | "Surface"?,
+	
+	--[[ only use if you're using surface ]]--^^^^
+	SurfaceNormal: Vector3?,
+	SurfaceWidth: number?,
+	SurfaceHeight: number?,
 }
 
 export type HitData = {
