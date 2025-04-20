@@ -6,6 +6,8 @@
 
 ## 📦 Module Structure
 
+All submodules are children inside the `SoundQuery` module.
+
 | Module               | Description                                                                 |
 |----------------------|-----------------------------------------------------------------------------|
 | `SoundQuery.lua`     | Main interface for running a sound query. Returns a `QueryResult` object.   |
