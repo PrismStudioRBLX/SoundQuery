@@ -1,12 +1,13 @@
 --[[
 Ray Visualization Key:
 
-🔴 Red	Occluded ray (blocked completely)
-🟢 Green	Valid hit (surface bounced or stopped)
-🟡 Yellow	Passthrough (partially passed through)
-
+🔴 Red    Occluded ray (blocked completely)
+🟢 Green  Valid hit (surface bounced or stopped)
+🟡 Yellow Passthrough (partially passed through)
 ]]
+
 local Raycaster = require("./Raycaster")
+local RayDistribution = require("./RayDistribution")
 local Types = require("./Types")
 type HitData = Types.HitData
 type QueryProps = Types.QueryProps
@@ -17,7 +18,7 @@ Propagator.Debug = true
 
 local debugParts = {}
 
-local function visualizeRay(startPos, endPos, color) : ()
+local function visualizeRay(startPos, endPos, color): ()
 	if not Propagator.Debug then return end
 	local part = Instance.new("Part")
 	part.Anchored = true
@@ -30,7 +31,6 @@ local function visualizeRay(startPos, endPos, color) : ()
 	part.Name = "SoundRay"
 	part.Parent = workspace
 	game:GetService("Debris"):AddItem(part, Propagator.DespawnTime)
-	
 	table.insert(debugParts, part)
 end
 
@@ -38,17 +38,17 @@ local function getIgnoredParts()
 	return debugParts
 end
 
-local function defaultFalloff(distance, maxDistance, power) : number
+local function defaultFalloff(distance, maxDistance, power): number
 	local ratio = distance / maxDistance
 	return power * (1 - ratio)
 end
 
-function Propagator.SetDespawnTime(timeToSet : number)
+function Propagator.SetDespawnTime(timeToSet: number)
 	assert(typeof(timeToSet) == 'number', 'Time given to Propagator Despawn Time function is NOT a number.')
 	Propagator.DespawnTime = timeToSet
 end
 
-local function GenerateSphericalDirections(n) : {Vector3}
+local function GenerateSphericalDirections(n): {Vector3}
 	local dirs = {}
 	local goldenRatio = (1 + math.sqrt(5)) / 2
 
@@ -66,15 +66,15 @@ local function GenerateSphericalDirections(n) : {Vector3}
 	return dirs
 end
 
-function Propagator.Propagate(props : QueryProps) : {HitData}
+function Propagator.Propagate(props : QueryProps): {HitData}
+	local shape = props.Shape or "Point"
+	local resolution = props.Resolution or 32
 	local origin = props.Origin
 	local range = props.Range or 100
-	local resolution = props.Resolution or 32
 	local bounces = props.Bounces or 1
 	local power = props.Power or 1
 	local ignore = props.IgnoreList or {}
 	local falloff = props.Falloff or defaultFalloff
-	local direction = props.Direction
 
 	if type(falloff) == "string" then
 		if falloff == "linear" then
@@ -90,16 +90,15 @@ function Propagator.Propagate(props : QueryProps) : {HitData}
 
 	local hits = {}
 
-	for i = 1, resolution do
-		local angle = (i / resolution) * math.pi * 2
-		local dir = direction or Vector3.new(math.cos(angle), 0, math.sin(angle))
+	local rayDirections = RayDistribution.Generate(shape, resolution, props)
 
-		local currentOrigin = origin
+	for _, rayInfo in rayDirections do
+		local currentOrigin = rayInfo.Origin
+		local dir = rayInfo.Direction
 		local remainingPower = power
 		local depth = 0
 
 		while depth <= bounces and remainingPower > 0.01 do
-			
 			local result = Raycaster.CastRay(currentOrigin, dir, {
 				Origin = origin,
 				Range = range,
@@ -116,7 +115,7 @@ function Propagator.Propagate(props : QueryProps) : {HitData}
 				local materialDamp = result.MaterialDampening or 1
 				local passthrough = result.Passthrough or false
 				local occluded = result.Occluded or false
-				
+
 				if occluded then
 					visualizeRay(currentOrigin, hitPos, Color3.fromRGB(255, 0, 0))
 					break
@@ -132,7 +131,7 @@ function Propagator.Propagate(props : QueryProps) : {HitData}
 				})
 
 				visualizeRay(currentOrigin, hitPos, passthrough and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(0, 255, 0))
-				
+
 				if not passthrough and result.Normal then
 					dir = dir - 2 * dir:Dot(result.Normal) * result.Normal
 				end
@@ -140,14 +139,13 @@ function Propagator.Propagate(props : QueryProps) : {HitData}
 				currentOrigin = hitPos + dir * 0.1
 				remainingPower *= passthrough and (0.8 * materialDamp) or (0.5 * materialDamp)
 				depth += 1
-				
+
 				local currentDebugParts = getIgnoredParts()
 				for _, part in pairs(currentDebugParts) do
-					if part:IsA('BasePart') then 
+					if part:IsA('BasePart') then
 						table.insert(ignore, part)
 					end
 				end
-
 			else
 				break
 			end
@@ -156,5 +154,6 @@ function Propagator.Propagate(props : QueryProps) : {HitData}
 
 	return hits
 end
+
 
 return Propagator
